@@ -210,7 +210,7 @@ void* row_slot(Table* table, uint32_t row_num) {
 }
 
 void print_prompt() {
-    printf("db> ");
+    printf("db > ");
 }
 
 Table* new_table() {

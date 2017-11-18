@@ -22,8 +22,10 @@ typedef enum execute_result_t {
 
 typedef enum prepare_result_t {
     PREPARE_SUCCESS,
+    PREPARE_INVALID_ID,
     PREPARE_UNRECOGNIZED,
-    PREPARE_SYNTAX_ERROR
+    PREPARE_SYNTAX_ERROR,
+    PREPARE_STRING_TOO_LONG
 } PrepareResult;
 
 typedef enum prepared_type_t {
@@ -43,8 +45,8 @@ typedef struct table_t {
 
 typedef struct row_t {
     uint32_t id;
-    char username[COLUMN_USERNAME_SIZE];
-    char email[COLUMN_EMAIL_SIZE];
+    char username[COLUMN_USERNAME_SIZE + 1];
+    char email[COLUMN_EMAIL_SIZE + 1];
 } Row;
 
 typedef struct statement_t {
@@ -105,6 +107,12 @@ int main() {
         case PREPARE_UNRECOGNIZED:
             printf("Unrecognized keyword at start of [%s]\n", input_buffer->buffer);
             continue;
+        case PREPARE_STRING_TOO_LONG:
+            printf("String is too long\n");
+            continue;
+        case PREPARE_INVALID_ID:
+            printf("Id must be positive\n");
+            continue;
         }
 
         // We have a real Statement here
@@ -127,19 +135,35 @@ MetaCommandResult do_meta_command(InputBuffer* buffer) {
     }
 }
 
+PrepareResult prepare_insert(InputBuffer* buffer, Statement* statement) {
+    statement->type = STATEMENT_INSERT;
+
+    char* keyword = strtok(buffer->buffer, " ");
+    char* id_str = strtok(NULL, " ");
+    char* username = strtok(NULL, " ");
+    char* email = strtok(NULL, " ");
+
+    if(!id_str || !username || !email) {
+        return PREPARE_SYNTAX_ERROR;
+    }
+
+    int id = atoi(id_str);
+    if(id < 0)
+        return PREPARE_INVALID_ID;
+
+    if(strlen(username) > COLUMN_USERNAME_SIZE || strlen(email) > COLUMN_EMAIL_SIZE)
+        return PREPARE_STRING_TOO_LONG;
+
+    statement->row_to_insert.id = id;
+    strcpy(statement->row_to_insert.username, username);
+    strcpy(statement->row_to_insert.email, email);
+
+    return PREPARE_SUCCESS;
+}
+
 PrepareResult prepare_statement(InputBuffer* buffer, Statement* statement) {
     if(strncmp(buffer->buffer, "insert", 6) == 0) { // Starts with 'insert'...followed by more
-        statement->type = STATEMENT_INSERT;
-        int args_assigned = sscanf(
-            buffer->buffer,
-            "insert %d %s %s",
-            &statement->row_to_insert.id,
-            statement->row_to_insert.username,
-            statement->row_to_insert.email);
-        if(args_assigned < 3) {
-            return PREPARE_SYNTAX_ERROR;
-        }
-        return PREPARE_SUCCESS;
+       return prepare_insert(buffer, statement);
     }
 
     if(strcmp(buffer->buffer, "select") == 0) {

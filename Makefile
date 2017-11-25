@@ -8,3 +8,4 @@ test:
 	rspec spec spec/test_spec.rb
 clean:
 	rm ./db
+	rm ./test.db

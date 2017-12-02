@@ -126,7 +126,7 @@ describe 'database' do
         ])
     end
 
-    it 'allws printing out the structure of a one-node btree' do
+    it 'allows printing out the structure of a one-node btree' do
         script = [3, 1, 2].map do |i|
             "insert #{i} user#{i} person#{i}@example.com"
         end
@@ -140,9 +140,26 @@ describe 'database' do
             "db > Executed",
             "db > Tree:",
             "leaf (size 3)",
-            "  - 0 : 3",
-            "  - 1 : 1",
-            "  - 2 : 2",
+            "  - 0 : 1",
+            "  - 1 : 2",
+            "  - 2 : 3",
+            "db > "
+        ])
+    end
+
+    it 'detects duplicate key insertions' do
+        script = [
+            "insert 1 user1 user1@example.com",
+            "insert 1 user1 user1@example.com",
+            "select",
+            ".exit"            
+        ]
+        result = run_script(script)
+        expect(result).to eq([
+            "db > Executed",
+            "db > Error: Duplicate key",
+            "db > (1, user1, user1@example.com)",
+            "Executed",
             "db > "
         ])
     end
